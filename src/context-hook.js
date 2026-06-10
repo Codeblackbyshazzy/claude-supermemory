@@ -9,12 +9,14 @@ const { readStdin, writeOutput } = require('./lib/stdin');
 const { startAuthFlow, AUTH_BASE_URL } = require('./lib/auth');
 const { formatContext, combineContexts } = require('./lib/format-context');
 const { getUserFriendlyError, isBenignError } = require('./lib/error-helpers');
+const { PLUGIN_VERSION } = require('./lib/plugin-version');
 const { checkForUpdate, formatUpdateNotice } = require('./lib/version-check');
 
-const PLUGIN_VERSION = '0.0.5';
-
 function combineOutputParts(parts) {
-  return parts.map((part) => part && part.trim()).filter(Boolean).join('\n\n');
+  return parts
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join('\n\n');
 }
 
 async function main() {
@@ -43,11 +45,14 @@ async function main() {
         writeOutput({
           hookSpecificOutput: {
             hookEventName: 'SessionStart',
-            additionalContext: combineOutputParts([`<supermemory-status>
+            additionalContext: combineOutputParts([
+              `<supermemory-status>
 ${isTimeout ? 'Authentication timed out. Please complete login in the browser window.' : 'Authentication failed.'}
 If the browser did not open, visit: ${AUTH_BASE_URL}
 Or set SUPERMEMORY_CC_API_KEY environment variable manually.
-</supermemory-status>`, await updateCheck]),
+</supermemory-status>`,
+              await updateCheck,
+            ]),
           },
         });
         return;
@@ -144,7 +149,10 @@ Memories will be saved as you work.
     writeOutput({
       hookSpecificOutput: {
         hookEventName: 'SessionStart',
-        additionalContext: combineOutputParts([errorNotice + additionalContext, updateNotice]),
+        additionalContext: combineOutputParts([
+          errorNotice + additionalContext,
+          updateNotice,
+        ]),
       },
     });
   } catch (err) {
