@@ -14,7 +14,7 @@ function ensureDir() {
 
 /**
  * Save the current Claude session's Supermemory document info.
- * This allows /claude-supermemory:session to show the correct deep link.
+ * This allows /supermemory:session to show the correct deep link.
  */
 function saveLastSession({ id, containerTag }) {
   if (!id) return;

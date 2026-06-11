@@ -1,5 +1,5 @@
 {
-  "name": "claude-supermemory",
+  "name": "supermemory",
   "version": "0.0.5",
   "description": "Persistent memory across Claude Code sessions using Supermemory",
   "author": {

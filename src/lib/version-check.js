@@ -51,7 +51,7 @@ async function checkForUpdate(currentVersion) {
       updateCommand:
         typeof data.updateCommand === 'string'
           ? data.updateCommand
-          : '/plugin install claude-supermemory',
+          : '/plugin install supermemory',
     };
   } catch {
     return null;

@@ -6,7 +6,7 @@
   },
   "plugins": [
     {
-      "name": "claude-supermemory",
+      "name": "supermemory",
       "source": "./plugin",
       "description": "Persistent memory across Claude Code sessions using Supermemory",
       "version": "0.0.5",

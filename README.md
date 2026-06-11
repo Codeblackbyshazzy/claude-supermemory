@@ -17,7 +17,7 @@ Your agent remembers what you worked on - across sessions, across projects.
 
 ```bash
 /plugin marketplace add supermemoryai/claude-supermemory
-/plugin install claude-supermemory
+/plugin install supermemory
 ```
 
 Set your API key (get one at [app.supermemory.ai](https://app.supermemory.ai)):
@@ -35,11 +35,11 @@ export SUPERMEMORY_CC_API_KEY="sm_..."
 
 | Command                              | Description                              |
 | ------------------------------------ | ---------------------------------------- |
-| `/claude-supermemory:index`          | Index codebase architecture and patterns |
-| `/claude-supermemory:project-config` | Configure project-level settings         |
-| `/claude-supermemory:logout`         | Clear saved credentials                  |
-| `/claude-supermemory:session`        | Show clickable URL for the current session document in Supermemory |
-| `/claude-supermemory:status`         | Show authentication status |
+| `/supermemory:index`          | Index codebase architecture and patterns |
+| `/supermemory:project-config` | Configure project-level settings         |
+| `/supermemory:logout`         | Clear saved credentials                  |
+| `/supermemory:session`        | Show clickable URL for the current session document in Supermemory |
+| `/supermemory:status`         | Show authentication status |
 
 ## Configuration
 
@@ -72,7 +72,7 @@ SUPERMEMORY_DEBUG=true           # Optional: enable debug logging
 
 **Project Config** — `.claude/.supermemory-claude/config.json`
 
-Per-repo overrides. Run `/claude-supermemory:project-config` or create manually:
+Per-repo overrides. Run `/supermemory:project-config` or create manually:
 
 ```json
 {
