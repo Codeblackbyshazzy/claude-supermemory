@@ -16,6 +16,7 @@ const DEFAULT_SETTINGS = {
   maxProfileItems: 5,
   debug: false,
   injectProfile: true,
+  recallDirective: null,
   signalExtraction: false,
   signalKeywords: [
     'remember',
@@ -158,6 +159,16 @@ function getSignalConfig(cwd) {
   return { enabled, keywords, turnsBefore };
 }
 
+function getRecallConfig(cwd) {
+  const settings = loadSettings();
+  const projectConfig = loadProjectConfig(cwd || process.cwd());
+
+  const directive =
+    projectConfig?.recallDirective || settings.recallDirective || null;
+
+  return { directive };
+}
+
 module.exports = {
   SETTINGS_DIR,
   SETTINGS_FILE,
@@ -170,4 +181,5 @@ module.exports = {
   getIncludeTools,
   shouldIncludeTool,
   getSignalConfig,
+  getRecallConfig,
 };
