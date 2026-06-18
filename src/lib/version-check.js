@@ -70,8 +70,7 @@ function saveNoticeState(latestVersion) {
         2,
       ),
     );
-  } catch {
-  }
+  } catch {}
 }
 
 function shouldShowNotice(latestVersion, state) {
