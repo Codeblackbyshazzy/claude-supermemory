@@ -5,9 +5,7 @@ const { SETTINGS_FILE } = require('./lib/settings');
 const {
   getProjectName,
   getContainerTag,
-  getRepoContainerTag,
-  getPersonalReadTags,
-  getProjectReadTags,
+  getAllReadTags,
 } = require('./lib/container-tag');
 const { getConfigPath } = require('./lib/project-config');
 
@@ -97,10 +95,8 @@ function main() {
   console.log('');
   console.log('Status:');
   console.log(`- Project: ${projectName}`);
-  console.log(`- Personal writes: ${getContainerTag(cwd)}`);
-  console.log(`- Project writes: ${getRepoContainerTag(cwd)}`);
-  console.log(`- Personal reads: ${getPersonalReadTags(cwd).join(', ')}`);
-  console.log(`- Project reads: ${getProjectReadTags(cwd).join(', ')}`);
+  console.log(`- Project container: ${getContainerTag(cwd)}`);
+  console.log(`- Reads (including legacy): ${getAllReadTags(cwd).join(', ')}`);
   console.log(`- API key source: ${displayPath(auth.source)}`);
   console.log(`- API key: ${maskApiKey(auth.apiKey)}`);
 }

@@ -2,7 +2,11 @@ const {
   SupermemoryClient,
   PERSONAL_ENTITY_CONTEXT,
 } = require('./lib/supermemory-client');
-const { getContainerTag, getProjectName } = require('./lib/container-tag');
+const {
+  getContainerTag,
+  getProjectIdentity,
+  getProjectName,
+} = require('./lib/container-tag');
 const { loadProjectConfig } = require('./lib/project-config');
 const {
   loadSettings,
@@ -77,6 +81,7 @@ async function main() {
       {
         type: 'session_turn',
         project: projectName,
+        sm_project_id: getProjectIdentity(cwd),
         sm_scope: 'personal',
         sm_capture_mode: 'automatic',
         timestamp: new Date().toISOString(),

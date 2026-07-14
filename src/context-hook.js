@@ -1,9 +1,5 @@
 const { SupermemoryClient } = require('./lib/supermemory-client');
-const {
-  getProjectName,
-  getPersonalReadTags,
-  getProjectReadTags,
-} = require('./lib/container-tag');
+const { getProjectName, getAllReadTags } = require('./lib/container-tag');
 const { loadProjectConfig } = require('./lib/project-config');
 const {
   loadSettings,
@@ -68,10 +64,9 @@ Or set SUPERMEMORY_CC_API_KEY environment variable manually.
 
     const baseUrl = getBaseUrl(cwd, projectConfig);
     const client = new SupermemoryClient(apiKey, undefined, { baseUrl });
-    const personalTags = getPersonalReadTags(cwd);
-    const repoTags = getProjectReadTags(cwd);
+    const readTags = getAllReadTags(cwd);
 
-    debugLog(settings, 'Fetching contexts', { personalTags, repoTags });
+    debugLog(settings, 'Fetching project context', { readTags });
 
     const apiErrors = [];
 
@@ -92,29 +87,14 @@ Or set SUPERMEMORY_CC_API_KEY environment variable manually.
       return null;
     };
 
-    const [personalResult, repoResult] = await Promise.all([
-      client
-        .getProfileMany(personalTags, projectName, {
-          limit: settings.maxProfileItems,
-        })
-        .catch(handleProfileError('personal')),
-      client
-        .getProfileMany(repoTags, projectName, {
-          limit: settings.maxProfileItems,
-        })
-        .catch(handleProfileError('repo')),
-    ]);
+    const projectResult = await client
+      .getProfileMany(readTags, projectName, {
+        limit: settings.maxProfileItems,
+      })
+      .catch(handleProfileError('project'));
 
-    const personalContext = formatContext(
-      personalResult,
-      true,
-      false,
-      settings.maxProfileItems,
-      false,
-    );
-
-    const repoContext = formatContext(
-      repoResult,
+    const projectContext = formatContext(
+      projectResult,
       true,
       false,
       settings.maxProfileItems,
@@ -122,10 +102,9 @@ Or set SUPERMEMORY_CC_API_KEY environment variable manually.
     );
 
     const additionalContext = combineContexts([
-      { label: '### Personal Memories', content: personalContext },
       {
-        label: '### Project Knowledge (Shared across team)',
-        content: repoContext,
+        label: '### Project Memories (Shared across agents)',
+        content: projectContext,
       },
     ]);
 
@@ -155,8 +134,7 @@ Memories will be saved as you work.
 
     debugLog(settings, 'Context generated', {
       length: additionalContext.length,
-      hasPersonal: !!personalContext,
-      hasRepo: !!repoContext,
+      hasProject: !!projectContext,
     });
 
     const updateNotice = await updateCheck;

@@ -64,20 +64,24 @@ function readTags(cwd, home) {
 }
 
 describe('unified container tags', () => {
-  test('writes canonical tags and reads Claude and Codex legacy tags', (t) => {
+  test('writes one stable canonical tag and reads Claude and Codex legacy tags', (t) => {
     const { repo, git, home } = makeRepo(t);
     const tags = readTags(repo, home);
     const pathHash = hash16(git(['rev-parse', '--show-toplevel']));
     const userHash = hash16('test@example.com');
+    const projectHash = hash16('github.com/acme/example.project');
+    const canonicalTag = `repo_example_project__${projectHash}`;
 
-    assert.equal(tags.personal, `user_project_${pathHash}`);
-    assert.equal(tags.project, 'repo_example_project');
+    assert.equal(tags.personal, canonicalTag);
+    assert.equal(tags.project, canonicalTag);
     assert.deepEqual(tags.personalReads, [
+      canonicalTag,
       `user_project_${pathHash}`,
       `claudecode_project_${pathHash}`,
       `codex_user_${userHash}`,
     ]);
     assert.deepEqual(tags.projectReads, [
+      canonicalTag,
       'repo_example_project',
       `codex_project_${pathHash}`,
     ]);
@@ -107,9 +111,10 @@ describe('unified container tags', () => {
     );
 
     const tags = readTags(repo, home);
-    assert.equal(tags.personal, 'shared_personal');
+    assert.equal(tags.personal, 'shared_project');
     assert.equal(tags.project, 'shared_project');
-    assert.equal(tags.personalReads[0], 'shared_personal');
+    assert.equal(tags.personalReads[0], 'shared_project');
+    assert.ok(tags.personalReads.includes('shared_personal'));
     assert.equal(tags.projectReads[0], 'shared_project');
   });
 });

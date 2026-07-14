@@ -49,21 +49,21 @@ export SUPERMEMORY_CC_API_KEY="sm_..."
 
 ### Shared Agents memory
 
-Claude Code and `codex-supermemory` use the same two containers for a repository:
+Claude Code and `codex-supermemory` use one container for a repository:
 
-- `user_project_<path-hash>` stores automatic session capture and explicit personal memories.
-- `repo_<project-name>` stores explicitly saved project knowledge.
+- `repo_<project-name>__<remote-hash>` stores automatic capture and every explicit save.
+- `sm_scope` metadata keeps personal and project memories filterable inside that container.
 
-Both plugins write only to the shared containers and read from them plus the previous
-`claudecode_project_*`, `codex_user_*`, and `codex_project_*` containers. Existing
-memories remain searchable without duplicating or migrating them. Linked worktrees
-share the same path-scoped personal container unless
-`SUPERMEMORY_ISOLATE_WORKTREES=true` is set.
+The hash is derived from the normalized Git remote, so clones share memory while
+same-named repositories do not collide. Repositories without a remote fall back to
+a local path identity. Both plugins also read the previous `user_project_*`,
+`repo_<project-name>`, `claudecode_project_*`, `codex_user_*`, and
+`codex_project_*` containers, so existing memories remain searchable without a
+migration. Set `SUPERMEMORY_ISOLATE_WORKTREES=true` to use the worktree path
+instead of the remote identity.
 
-Explicit `personalContainerTag`/`repoContainerTag` project overrides take precedence.
-For compatibility, explicit `userContainerTag`/`projectContainerTag` values in
-`~/.codex/supermemory.json` are also honored, so Claude Code and Codex continue to
-write to the same custom containers.
+Explicit `repoContainerTag`/`projectContainerTag` overrides remain the canonical
+write destination. Older personal/user overrides remain in the legacy read set.
 
 ## Commands
 
@@ -122,8 +122,8 @@ Per-repo overrides. Run `/supermemory:project-config` or create manually:
 | ---------------------- | --------------------------- |
 | `apiKey`               | Project-specific API key    |
 | `baseUrl`              | Supermemory API URL    |
-| `personalContainerTag` | Override personal container |
-| `repoContainerTag`     | Override team container tag |
+| `personalContainerTag` | Legacy personal container retained for reads |
+| `repoContainerTag`     | Override unified project container tag |
 
 ## License
 
