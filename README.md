@@ -2,8 +2,6 @@
 
 <img width="4000" height="2130" alt="image (6)" src="https://github.com/user-attachments/assets/07e63ac4-b67d-457b-9029-1dc5d860e920" />
 
-> **✨ Requires [Supermemory Pro or above](https://app.supermemory.ai/?view=integrations)** - Unlock the state of the art memory for your Claude code.
-
 A Claude Code plugin that gives your AI persistent memory across sessions using [Supermemory](https://supermemory.ai).
 Your agent remembers what you worked on - across sessions, across projects.
 
