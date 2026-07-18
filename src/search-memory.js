@@ -2,7 +2,9 @@ const { SupermemoryClient } = require('./lib/supermemory-client');
 const {
   getProjectName,
   getContainerTag,
-  getRepoContainerTag,
+  getAllReadTags,
+  getPersonalReadTags,
+  getProjectReadTags,
 } = require('./lib/container-tag');
 const { loadProjectConfig } = require('./lib/project-config');
 const { loadSettings, getApiKey, getBaseUrl } = require('./lib/settings');
@@ -55,37 +57,31 @@ async function main() {
   }
 
   const projectName = getProjectName(cwd);
-  const personalTag = getContainerTag(cwd);
-  const repoTag = getRepoContainerTag(cwd);
+  const canonicalTag = getContainerTag(cwd);
+  const allTags = getAllReadTags(cwd);
+  const personalTags = getPersonalReadTags(cwd);
+  const repoTags = getProjectReadTags(cwd);
 
   try {
     const baseUrl = getBaseUrl(cwd, projectConfig);
-    const client = new SupermemoryClient(apiKey, personalTag, { baseUrl });
+    const client = new SupermemoryClient(apiKey, canonicalTag, { baseUrl });
 
     console.log(`Project: ${projectName}\n`);
 
     if (containerType === 'both') {
-      const [personalResult, repoResult] = await Promise.all([
-        client.search(query, personalTag, { limit: 5 }),
-        client.search(query, repoTag, { limit: 5 }),
-      ]);
-
-      if (personalResult.results?.length > 0) {
-        console.log(
-          formatSearchResults(query, personalResult.results, 'Personal'),
-        );
-      }
-      if (repoResult.results?.length > 0) {
-        if (personalResult.results?.length > 0) console.log('');
-        console.log(formatSearchResults(query, repoResult.results, 'Project'));
-      }
-      if (!personalResult.results?.length && !repoResult.results?.length) {
-        console.log(`No memories found for "${query}"`);
-      }
+      const result = await client.searchMany(query, allTags, { limit: 10 });
+      console.log(formatSearchResults(query, result.results, 'Project'));
     } else {
-      const tag = containerType === 'user' ? personalTag : repoTag;
+      const tags = containerType === 'user' ? personalTags : repoTags;
+      const scope = containerType === 'user' ? 'personal' : 'project';
       const label = containerType === 'user' ? 'Personal' : 'Project';
-      const searchResult = await client.search(query, tag, { limit: 10 });
+      const searchResult = await client.searchScoped(
+        query,
+        canonicalTag,
+        tags,
+        scope,
+        { limit: 10 },
+      );
       console.log(formatSearchResults(query, searchResult.results, label));
     }
   } catch (err) {

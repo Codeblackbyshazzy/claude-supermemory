@@ -2,7 +2,11 @@ const fs = require('node:fs');
 const os = require('node:os');
 const { CREDENTIALS_FILE } = require('./lib/auth');
 const { SETTINGS_FILE } = require('./lib/settings');
-const { getProjectName } = require('./lib/container-tag');
+const {
+  getProjectName,
+  getContainerTag,
+  getAllReadTags,
+} = require('./lib/container-tag');
 const { getConfigPath } = require('./lib/project-config');
 
 function readJson(filePath) {
@@ -91,6 +95,8 @@ function main() {
   console.log('');
   console.log('Status:');
   console.log(`- Project: ${projectName}`);
+  console.log(`- Project container: ${getContainerTag(cwd)}`);
+  console.log(`- Reads (including legacy): ${getAllReadTags(cwd).join(', ')}`);
   console.log(`- API key source: ${displayPath(auth.source)}`);
   console.log(`- API key: ${maskApiKey(auth.apiKey)}`);
 }

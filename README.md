@@ -45,6 +45,24 @@ export SUPERMEMORY_CC_API_KEY="sm_..."
 - **supermemory-search** — Ask about past work or previous sessions, Claude searches your memories
 - **supermemory-save** — Ask to save something important, Claude saves it for the team
 
+### Shared Agents memory
+
+Claude Code and `codex-supermemory` use one container for a repository:
+
+- `repo_<project-name>__<remote-hash>` stores automatic capture and every explicit save.
+- `sm_scope` metadata keeps personal and project memories filterable inside that container.
+
+The hash is derived from the normalized Git remote, so clones share memory while
+same-named repositories do not collide. Repositories without a remote fall back to
+a local path identity. Both plugins also read the previous `user_project_*`,
+`repo_<project-name>`, `claudecode_project_*`, `codex_user_*`, and
+`codex_project_*` containers, so existing memories remain searchable without a
+migration. Set `SUPERMEMORY_ISOLATE_WORKTREES=true` to use the worktree path
+instead of the remote identity.
+
+Explicit `repoContainerTag`/`projectContainerTag` overrides remain the canonical
+write destination. Older personal/user overrides remain in the legacy read set.
+
 ## Commands
 
 | Command                              | Description                              |
@@ -102,8 +120,8 @@ Per-repo overrides. Run `/supermemory:project-config` or create manually:
 | ---------------------- | --------------------------- |
 | `apiKey`               | Project-specific API key    |
 | `baseUrl`              | Supermemory API URL    |
-| `personalContainerTag` | Override personal container |
-| `repoContainerTag`     | Override team container tag |
+| `personalContainerTag` | Legacy personal container retained for reads |
+| `repoContainerTag`     | Override unified project container tag |
 
 ## License
 

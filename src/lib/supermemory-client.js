@@ -5,6 +5,10 @@ const {
   validateContainerTag,
 } = require('./validate.js');
 const { BASE_URL } = require('./constants');
+const {
+  mergeSearchResponses,
+  mergeProfileResponses,
+} = require('./result-merge');
 
 const DEFAULT_PROJECT_ID = 'claudecode_default';
 
@@ -18,44 +22,38 @@ function dedupe(items, getKey = (x) => x) {
   });
 }
 
-const PERSONAL_ENTITY_CONTEXT = `Developer coding session transcript. Focus on USER message and intent.
+function getScopeFilters(scope) {
+  return {
+    AND: [{ key: 'sm_scope', value: scope, filterType: 'metadata' }],
+  };
+}
+
+function supportsScopedCanonicalTag(containerTag) {
+  return /^repo_.+__[0-9a-f]{16}$/i.test(containerTag);
+}
+
+const AGENT_ENTITY_CONTEXT = `Shared coding-agent memory for one software repository.
 
 RULES:
-- Extract USER's action/intent, not every detail assistant provides matter
-- Condense assistant responses into what user gained from it
-- Skip granular facts from assistant output
+- Preserve durable context that helps Claude Code or Codex continue the work
+- Condense assistant responses into decisions, outcomes, and reusable knowledge
+- Keep user preferences and project facts concise and independently understandable
 
 EXTRACT:
-- Research: "researched whisper.cpp for speech recognition"
-- Actions: "built auth flow with JWT", "fixed memory leak in useEffect"
-- Preferences: "prefers Tailwind over CSS modules"
-- Decisions: "chose SQLite for local storage"
-- Learnings: "learned about React Server Components"
-
-EXAMPLES:
-| Transcript | Memory |
-| [role:user] research about the whisper.cpp -> https://github.com/ggml-org/whisper.cpp/blob/master/src/whisper.cpp [user:end]| "<User> starts research about whisper.cpp" |
-| [role:assistant] ## whisper.cpp Architecture Summary \n This is highly relevant for your parakeet.cpp implementation. Here are the key patterns: \n ### Core Architecture \n **Two-level context design:**\n - whisper_context - holds model weights, vocab, hyperparameters (persistent) \n - whisper_state - runtime state, KV caches, backends (can have multiple per context) [assistant:end] | "Assistant did a deep dive on whisper architecture" |
-| [role:user] Can we explain what we are currently doing in this repository? [user:end] | "<Multiple comprehensive memories using assistant reponse>" |
-
-SKIP:
-- Every fact assistant mentions (condense to user's action)
-- Generic assistant explanations user didn't confirm/use`;
-
-const REPO_ENTITY_CONTEXT = `Project/codebase knowledge for team sharing.
-
-EXTRACT:
+- User preferences, accepted decisions, durable workflows, actions, and learnings
 - Architecture: "uses monorepo with turborepo", "API in /apps/api"
 - Conventions: "components in PascalCase", "hooks prefixed with use"
 - Patterns: "all API routes use withAuth wrapper", "errors thrown as ApiError"
 - Setup: "requires .env with DATABASE_URL", "run pnpm db:migrate first"
 - Decisions: "chose Drizzle over Prisma for performance", "using RSC for data fetching"
 
-EXAMPLES:
-| Input | Memory |
-| "The auth flow works by..." | "Auth flow: [description]" |
-| "We structure components like..." | "Component structure convention: [pattern]" |
-| "To add a new API route..." | "Adding API routes: [steps]" |`;
+SKIP:
+- Generic assistant suggestions the user did not accept
+- Transient command output and low-value implementation chatter
+- Granular details that do not help future work`;
+
+const PERSONAL_ENTITY_CONTEXT = AGENT_ENTITY_CONTEXT;
+const REPO_ENTITY_CONTEXT = AGENT_ENTITY_CONTEXT;
 
 class SupermemoryClient {
   constructor(apiKey, containerTag, options = {}) {
@@ -99,18 +97,22 @@ class SupermemoryClient {
   }
 
   async search(query, containerTag, options = {}) {
-    const result = await this.client.search.memories({
+    const payload = {
       q: query,
       containerTag: containerTag || this.containerTag,
       limit: options.limit || 10,
       searchMode: options.searchMode || 'hybrid',
-    });
+    };
+    if (options.filters) payload.filters = options.filters;
+    const result = await this.client.search.memories(payload);
     const mapped = result.results.map((r) => ({
+      id: r.id,
       memory: r.content || r.memory || r.context || '',
       chunk: r.chunk,
       metadata: r.metadata,
       updatedAt: r.updatedAt,
       similarity: r.similarity,
+      containerTag: containerTag || this.containerTag,
     }));
     return {
       results: dedupe(mapped, (r) => r.memory),
@@ -119,11 +121,55 @@ class SupermemoryClient {
     };
   }
 
-  async getProfile(containerTag, query) {
-    const result = await this.client.profile({
+  async searchMany(query, containerTags, options = {}) {
+    const tags = [...new Set(containerTags.filter(Boolean))];
+    const settled = await Promise.allSettled(
+      tags.map((tag) => this.search(query, tag, options)),
+    );
+    const successful = settled
+      .filter((result) => result.status === 'fulfilled')
+      .map((result) => result.value);
+    if (successful.length === 0) {
+      const firstError = settled.find((result) => result.status === 'rejected');
+      throw (
+        firstError?.reason ||
+        new Error('No memory containers could be searched')
+      );
+    }
+    return mergeSearchResponses(successful, options.limit || 10);
+  }
+
+  async searchScoped(query, canonicalTag, containerTags, scope, options = {}) {
+    const legacyTags = [
+      ...new Set(containerTags.filter((tag) => tag && tag !== canonicalTag)),
+    ];
+    const canonicalOptions = supportsScopedCanonicalTag(canonicalTag)
+      ? { ...options, filters: getScopeFilters(scope) }
+      : options;
+    const settled = await Promise.allSettled([
+      this.search(query, canonicalTag, canonicalOptions),
+      ...legacyTags.map((tag) => this.search(query, tag, options)),
+    ]);
+    const successful = settled
+      .filter((result) => result.status === 'fulfilled')
+      .map((result) => result.value);
+    if (successful.length === 0) {
+      const firstError = settled.find((result) => result.status === 'rejected');
+      throw (
+        firstError?.reason ||
+        new Error('No memory containers could be searched')
+      );
+    }
+    return mergeSearchResponses(successful, options.limit || 10);
+  }
+
+  async getProfile(containerTag, query, options = {}) {
+    const payload = {
       containerTag: containerTag || this.containerTag,
       q: query,
-    });
+    };
+    if (options.filters) payload.filters = options.filters;
+    const result = await this.client.profile(payload);
 
     // Dedupe across static, dynamic, and search results
     const seen = new Set();
@@ -159,10 +205,57 @@ class SupermemoryClient {
       searchResults,
     };
   }
+
+  async getProfileMany(containerTags, query, options = {}) {
+    const tags = [...new Set(containerTags.filter(Boolean))];
+    const settled = await Promise.allSettled(
+      tags.map((tag) => this.getProfile(tag, query, options)),
+    );
+    const successful = settled
+      .filter((result) => result.status === 'fulfilled')
+      .map((result) => result.value);
+    if (successful.length === 0) {
+      const firstError = settled.find((result) => result.status === 'rejected');
+      throw (
+        firstError?.reason || new Error('No memory profiles could be loaded')
+      );
+    }
+    return mergeProfileResponses(successful, options.limit || 10);
+  }
+
+  async getProfileScoped(
+    canonicalTag,
+    containerTags,
+    scope,
+    query,
+    options = {},
+  ) {
+    const legacyTags = [
+      ...new Set(containerTags.filter((tag) => tag && tag !== canonicalTag)),
+    ];
+    const canonicalOptions = supportsScopedCanonicalTag(canonicalTag)
+      ? { ...options, filters: getScopeFilters(scope) }
+      : options;
+    const settled = await Promise.allSettled([
+      this.getProfile(canonicalTag, query, canonicalOptions),
+      ...legacyTags.map((tag) => this.getProfile(tag, query)),
+    ]);
+    const successful = settled
+      .filter((result) => result.status === 'fulfilled')
+      .map((result) => result.value);
+    if (successful.length === 0) {
+      const firstError = settled.find((result) => result.status === 'rejected');
+      throw (
+        firstError?.reason || new Error('No memory profiles could be loaded')
+      );
+    }
+    return mergeProfileResponses(successful, options.limit || 10);
+  }
 }
 
 module.exports = {
   SupermemoryClient,
+  AGENT_ENTITY_CONTEXT,
   PERSONAL_ENTITY_CONTEXT,
   REPO_ENTITY_CONTEXT,
 };

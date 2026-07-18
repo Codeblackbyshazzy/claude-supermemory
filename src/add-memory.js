@@ -2,7 +2,11 @@ const {
   SupermemoryClient,
   PERSONAL_ENTITY_CONTEXT,
 } = require('./lib/supermemory-client');
-const { getContainerTag, getProjectName } = require('./lib/container-tag');
+const {
+  getContainerTag,
+  getProjectIdentity,
+  getProjectName,
+} = require('./lib/container-tag');
 const { loadProjectConfig } = require('./lib/project-config');
 const { loadSettings, getApiKey, getBaseUrl } = require('./lib/settings');
 const { getUserFriendlyError } = require('./lib/error-helpers');
@@ -42,6 +46,9 @@ async function main() {
       {
         type: 'manual',
         project: projectName,
+        sm_project_id: getProjectIdentity(cwd),
+        sm_scope: 'personal',
+        sm_capture_mode: 'explicit',
         timestamp: new Date().toISOString(),
       },
       { entityContext: PERSONAL_ENTITY_CONTEXT },

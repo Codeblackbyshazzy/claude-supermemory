@@ -2,7 +2,11 @@ const {
   SupermemoryClient,
   REPO_ENTITY_CONTEXT,
 } = require('./lib/supermemory-client');
-const { getRepoContainerTag, getProjectName } = require('./lib/container-tag');
+const {
+  getRepoContainerTag,
+  getProjectIdentity,
+  getProjectName,
+} = require('./lib/container-tag');
 const { loadProjectConfig } = require('./lib/project-config');
 const { loadSettings, getApiKey, getBaseUrl } = require('./lib/settings');
 const { getUserFriendlyError } = require('./lib/error-helpers');
@@ -42,6 +46,9 @@ async function main() {
       {
         type: 'project-knowledge',
         project: projectName,
+        sm_project_id: getProjectIdentity(cwd),
+        sm_scope: 'project',
+        sm_capture_mode: 'explicit',
         timestamp: new Date().toISOString(),
       },
       { entityContext: REPO_ENTITY_CONTEXT },
